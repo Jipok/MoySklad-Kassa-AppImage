@@ -1,0 +1,64 @@
+name: Build and Release AppImage
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Запуск каждый день в полночь UTC
+  workflow_dispatch: # Позволяет запустить вручную из GitHub UI
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up AppImage environment
+        run: |
+          wget https://github.com/AppImage/pkg2appimage/releases/download/continuous/pkg2appimage--x86_64.AppImage
+          chmod +x pkg2appimage--x86_64.AppImage
+
+      - name: Build AppImage
+        run: |
+          export ARCH=x86_64
+          ./pkg2appimage--x86_64.AppImage recipe.yml
+
+      - name: Determine version
+        id: get_version
+        run: |
+          VERSION=$(ls moysklad/*.deb | grep -oP 'moysklad-kassa_\K([0-9.]+-\d+)(?=_amd64\.deb)')
+          mv out/* moysklad-kassa_${VERSION}.AppImage
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Check if version already exists
+        id: check_version
+        run: |
+          wget -q "https://api.github.com/repos/Jipok/MoySklad-Kassa-AppImage/releases/tags/$VERSION" -O- > release_info.json
+          if grep -q "Not Found" release_info.json; then
+            echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
+          else
+            echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
+          fi
+
+      - name: Create Release
+        if: env.RELEASE_EXISTS == 'false'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ env.VERSION }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        if: env.RELEASE_EXISTS == 'false'
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./moysklad-kassa_${{ env.VERSION }}.AppImage
+          asset_name: moysklad-kassa_${{ env.VERSION }}.AppImage

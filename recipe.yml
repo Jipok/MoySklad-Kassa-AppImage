@@ -1,0 +1,34 @@
+app: moysklad
+  binpatch: true
+
+ingredients:
+  dist: focal
+  packages:
+    - moysklad-kassa
+  sources:
+    - deb http://archive.ubuntu.com/ubuntu/ focal main
+    - deb https://downloads.moysklad.ru/pos/linux/deb stable non-free
+  script:
+    - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libgdk-pixbuf2.0-0/ { print $0 "\n" }' status
+    - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libcairo2/ { print $0 "\n" }' status
+    - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libgtk/ { print $0 "\n" }' status
+    - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libgdk/ { print $0 "\n" }' status
+    - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libatk/ { print $0 "\n" }' status
+    - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: gtk/ { print $0 "\n" }' status
+
+script:
+  - cp ./usr/share/icons/hicolor/256x256/apps/moysklad-kassa.png ./
+  - echo "#!/bin/sh" > ./usr/bin/run
+  - echo "../opt/Касса\ МойСклад/moysklad-kassa" >> ./usr/bin/run
+  - chmod +x ./usr/bin/run
+  - cat > moysklad.desktop <<EOF
+  - [Desktop Entry]
+  - Name=moysklad-kassa
+  - Exec=run %U
+  - Terminal=false
+  - Type=Application
+  - Icon=moysklad-kassa
+  - StartupWMClass=Касса МойСклад
+  - Comment=Приложение позволяет осуществлять розничную торговлю в системе учета МойСклад. Поддерживает подключение фискальных регистраторов.
+  - Categories=Office;
+  - EOF
