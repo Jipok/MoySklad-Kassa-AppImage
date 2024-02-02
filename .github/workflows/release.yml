@@ -2,7 +2,7 @@ name: Build and Release AppImage
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Запуск каждый день в полночь UTC
+    - cron: '0 0 */3 * *' # Запуск каждые три дня в полночь UTC
   workflow_dispatch: # Позволяет запустить вручную из GitHub UI
 
 jobs:
@@ -26,6 +26,7 @@ jobs:
         id: get_version
         run: |
           VERSION=$(ls moysklad/*.deb | grep -oP 'moysklad-kassa_\K([0-9.]+-\d+)(?=_amd64\.deb)')
+          echo $VERSION
           mv out/* moysklad-kassa_${VERSION}.AppImage
           echo "VERSION=$VERSION" >> $GITHUB_ENV
         shell: bash
@@ -33,7 +34,7 @@ jobs:
       - name: Check if version already exists
         id: check_version
         run: |
-          wget -q "https://api.github.com/repos/Jipok/MoySklad-Kassa-AppImage/releases/tags/$VERSION" -O- > release_info.json
+          curl -s "https://api.github.com/repos/Jipok/MoySklad-Kassa-AppImage/releases/tags/v$VERSION" > release_info.json
           if grep -q "Not Found" release_info.json; then
             echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
           else
@@ -47,8 +48,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ env.VERSION }}
+          tag_name: v${{ env.VERSION }}
+          release_name: Version ${{ env.VERSION }}
           draft: false
           prerelease: false
 
@@ -62,3 +63,4 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
           asset_path: ./moysklad-kassa_${{ env.VERSION }}.AppImage
           asset_name: moysklad-kassa_${{ env.VERSION }}.AppImage
+          asset_content_type: application/octet-stream

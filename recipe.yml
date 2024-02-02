@@ -10,6 +10,7 @@ ingredients:
     - deb https://downloads.moysklad.ru/pos/linux/deb stable non-free
   script:
     - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libgdk-pixbuf2.0-0/ { print $0 "\n" }' status
+    - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libpango/ { print $0 "\n" }' status
     - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libcairo2/ { print $0 "\n" }' status
     - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libgtk/ { print $0 "\n" }' status
     - awk -i inplace 'BEGIN { RS = ""; FS = "\n" } !/Package: libgdk/ { print $0 "\n" }' status
