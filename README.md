@@ -12,4 +12,5 @@ zap install --github --from=Jipok/MoySklad-Kassa-AppImage
 ```
 
 И обновления тоже: `zap upgrade`
+
 Не поддерживает ubuntu 20 из-за протухшего там glibc
