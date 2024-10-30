@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up AppImage environment
         run: |
@@ -38,29 +38,57 @@ jobs:
           if grep -q "Not Found" release_info.json; then
             echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
           else
-            echo "RELEASE_EXISTS=true" >> $GITHUB_ENV
+            echo "RELEASE_EXISTS=false" >> $GITHUB_ENV
           fi
 
-      - name: Create Release
-        if: env.RELEASE_EXISTS == 'false'
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ env.VERSION }}
-          release_name: Version ${{ env.VERSION }}
-          draft: false
-          prerelease: false
+      # - name: Create Release
+      #   if: env.RELEASE_EXISTS == 'false'
+      #   id: create_release
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: v${{ env.VERSION }}
+      #     release_name: Version ${{ env.VERSION }}
+      #     draft: false
+      #     prerelease: false
 
-      - name: Upload Release Asset
+      # - name: Upload Release Asset
+      #   if: env.RELEASE_EXISTS == 'false'
+      #   id: upload-release-asset
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+      #     asset_path: ./moysklad-kassa_${{ env.VERSION }}.AppImage
+      #     asset_name: moysklad-kassa_${{ env.VERSION }}.AppImage
+      #     asset_content_type: application/octet-stream
+      - name: Create Release and Upload Asset
         if: env.RELEASE_EXISTS == 'false'
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
+        run: |
+          gh release create "tv${{ env.RELEASE_EXISTS }}" \
+            --title "tVersion ${{ env.RELEASE_EXISTS }}" \
+            --notes "tRelease ${{ env.RELEASE_EXISTS }}" \
+            "./moysklad-kassa_${{ env.VERSION }}.AppImage"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./moysklad-kassa_${{ env.VERSION }}.AppImage
-          asset_name: moysklad-kassa_${{ env.VERSION }}.AppImage
-          asset_content_type: application/octet-stream
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete old releases
+        if: env.RELEASE_EXISTS == 'false'
+        run: |
+          RELEASES=$(gh release list -L 1000 --json tagName,createdAt | \
+            jq -r '.[] | [.createdAt,.tagName] | @tsv' | \
+            sort -r | \
+            awk '{print $2}')
+          
+          TOTAL=$(echo "$RELEASES" | wc -l)
+          
+          if [ "$TOTAL" -gt 20 ]; then
+            echo "$RELEASES" | tail -n +21 | while read -r tag; do
+              echo "Deleting release $tag"
+              gh release delete "$tag" -y
+            done
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
