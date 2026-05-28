@@ -1,8 +1,8 @@
 name: Build and Release AppImage
 
 on:
-  schedule:
-    - cron: '0 0 */3 * *' # Запуск каждые три дня в полночь UTC
+  #schedule:
+  #  - cron: '0 0 */3 * *' # Запуск каждые три дня в полночь UTC
   workflow_dispatch: # Позволяет запустить вручную из GitHub UI
 
 jobs:
